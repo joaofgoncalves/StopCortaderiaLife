@@ -2,12 +2,13 @@
 library(dplyr)
 library(ggplot2)
 library(readxl)
+library(tidyr)
 
 # Input folder where the data is sitting
-setwd("D:/MyDocs/Projects/LifeCortaderia")
+#setwd("D:/MyDocs/Projects/LifeCortaderia")
 
 # List all txt converted from the original .asd file format
-fl <- list.files("./DATA/TABLES/July2019_JG", pattern=".txt$", full.names = TRUE)
+fl <- list.files("./DATA/TABLES/Cortaderia_ReflProfiles", pattern=".txt$", full.names = TRUE)
 
 nLinesToIgnore<- 34 # Number of lines in the txt file header to ignore
 fs <- 0:209 # File sequence ID
@@ -36,6 +37,31 @@ for(i in 1:length(fl)){
   setTxtProgressBar(pb, i)
   
 }
+
+
+## --------------------------------------------------------------------------------- ##
+## Prepare 'the' master table in wide format with all spectroradiometer measurements
+## --------------------------------------------------------------------------------- ##
+
+# Convert the dataset into wide format
+# Wavelengths are put by column from 325 nm to 1025 nm
+reflDF_wide <- spread(reflDF, key = wl, value = refl)
+
+# Rename the columns by appending "wl_" (wavelength)
+nc <- ncol(reflDF_wide)
+colnames(reflDF_wide)[3:nc] <- paste("wl_",colnames(reflDF_wide[3:nc]),sep="")
+
+# Read metadata for each point regarding the type of vegetation analyzed
+fieldDF <- read_excel("./DATA/TABLES/LifeCortaderia_filedwork_02.07.2019-v1.xlsx")
+
+# Append the metadata to the file and reorder the columns
+reflDF_wide <- reflDF_wide %>% 
+  left_join(fieldDF %>% select(1,2), by="pointID") %>% 
+  rename(Type = vegetation_plant) %>% 
+  select(ncol(.), 1:(ncol(.)-1))
+
+write.csv(reflDF_wide, file = "./DATA/TABLES/Cortaderia_ReflProfilesField_Master-v1.csv",
+          row.names = FALSE)
 
 
 ## ---------------------------------------------------------------- ##
