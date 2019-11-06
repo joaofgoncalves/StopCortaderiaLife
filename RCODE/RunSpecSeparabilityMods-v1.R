@@ -165,8 +165,45 @@ for(mlMethod in mlMethods){ # Iterate through all the ML-methods
   
 }
 
+# Write performance data scores to file
+write.csv(perfScoresByMLmethod, "./OUT/perfScoresByMLmethod-v1.csv",row.names = FALSE)
+
 # Arrange/sort the output scores
 arrange(perfScoresByMLmethod,mlMethod,desc(mxKappa)) %>% 
   mutate(mxKappa=round(mxKappa,3), mxAccuracy=round(mxAccuracy,3))
+
+percDiff <- function(x) ((max(x) - min(x)) / max(x)) * 100
+
+perfScoresByMLmethod %>% 
+  filter(Sensor != "Worldview-2_and_3") %>% 
+  group_by(mlMethod) %>% 
+  summarize(DiffPerc = percDiff(mxKappa))
+
+# Average performance difference (%) between best and worst sensor
+perfScoresByMLmethod %>% 
+  filter(Sensor != "Worldview-2_and_3") %>% 
+  group_by(mlMethod) %>% 
+  summarize(DiffPerc = percDiff(mxKappa)) %>% 
+  select(DiffPerc) %>% pull %>% mean
+  
+# Best sensor across all ML methods
+perfScoresByMLmethod %>% 
+  filter(Sensor != "Worldview-2_and_3") %>% 
+  group_by(Sensor) %>% 
+  summarize(AvgKappa = mean(mxKappa),
+            MedKappa = median(mxKappa)) %>% 
+  arrange(desc(MedKappa))
+
+# Average Kappa across ML algorithms
+perfScoresByMLmethod %>% 
+  filter(Sensor != "Worldview-2_and_3") %>% 
+  group_by(mlMethod) %>% 
+  summarize(AvgKappa = mean(mxKappa),
+            MedKappa = median(mxKappa)) %>% 
+  arrange(desc(MedKappa))
+
+
+#save.image(file = "./OUT/SeparabilityAnalysis_Cortaderia-v1.RData")
+
 
 
