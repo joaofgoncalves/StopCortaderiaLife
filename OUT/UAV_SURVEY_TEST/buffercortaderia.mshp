@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SAGA_METADATA>
+  <HISTORY saga-version="2.3.2">
+    <MODULE library="shapes_tools" id="18" name="Shapes Buffer">
+      <OPTION type="table_field" id="DIST_FIELD" name="Buffer Distance" index="1">Raio</OPTION>
+      <OPTION type="double" id="DIST_FIELD_DEFAULT" name="Default">100.000000</OPTION>
+      <OPTION type="double" id="DIST_SCALE" name="Scaling Factor for Attribute Value">1.000000</OPTION>
+      <OPTION type="boolean" id="DISSOLVE" name="Dissolve Buffers">FALSE</OPTION>
+      <OPTION type="integer" id="NZONES" name="Number of Buffer Zones">1</OPTION>
+      <OPTION type="double" id="DARC" name="Arc Vertex Distance [Degree]">5.000000</OPTION>
+      <INPUT type="shapes" id="SHAPES" name="Shapes">
+        <FILE>D:\Lucas\SURVEYS\Primeiro_teste\Pontos_Individuos_Cortaderias\points_cortaderia_tm06.shp</FILE>
+      </INPUT>
+      <OUTPUT type="shapes" id="BUFFER" name="Buffer">points_cortaderia_tm06 [Buffer]</OUTPUT>
+    </MODULE>
+  </HISTORY>
+  <SOURCE>
+    <FILE></FILE>
+    <DATABASE>
+      <FIELDS>
+        <FIELD TYPE="LONGINT">id</FIELD>
+        <FIELD TYPE="DOUBLE">Raio</FIELD>
+      </FIELDS>
+    </DATABASE>
+    <PROJECTION>
+      <OGC_WKT>PROJCS["ETRS89_Portugal_TM06",GEOGCS["GCS_ETRS_1989",DATUM["D_ETRS_1989",SPHEROID["GRS_1980",6378137,298.257222101]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",39.66825833333333],PARAMETER["central_meridian",-8.133108333333334],PARAMETER["scale_factor",1],PARAMETER["false_easting",0],PARAMETER["false_northing",0],UNIT["Meter",1]]</OGC_WKT>
+      <PROJ4>+proj=tmerc +a=6378137.000000 +b=6356752.314140 +lat_0=39.66825833333333 +lon_0=-8.133108333333334 +k_0=1 +x_0=0 +y_0=0 +no_defs</PROJ4>
+      <EPSG>-1</EPSG>
+    </PROJECTION>
+  </SOURCE>
+  <DESCRIPTION></DESCRIPTION>
+</SAGA_METADATA>
