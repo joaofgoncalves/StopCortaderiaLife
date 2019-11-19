@@ -146,8 +146,23 @@ g3 <- ggplot(reflByLCtype %>% filter(wl >= 350, wl <= 1000,
   theme_bw() + 
   theme(legend.position="bottom")
 
+
+## PT version
+g3 <- ggplot(reflByLCtype %>% filter(wl >= 350, wl <= 1000, 
+                                     !(vegetation_plant %in% c("Daucus sp. (dry)","Mentha sp. / Holcus lanatus",
+                                                               "Mix therophytes", "Mentha sp. (fl.)"))), 
+             aes(x=wl,y=refl_AV,color=vegetation_plant)) + 
+  #geom_ribbon(aes(ymin = refl_AV - 0.5*refl_SD, ymax = refl_AV + 0.5*refl_SD),alpha=0.5) +
+  geom_line(size=1) + 
+  #scale_color_brewer(palette="BrBG") +
+  ylab("Reflectância") + xlab("Comprimento de onda (nm)") +
+  labs(title="Perfis espectrais") + 
+  scale_color_brewer(palette = "Set1",name="") + 
+  theme_bw() + 
+  theme(legend.position="bottom")
+
 plot(g3)
 
-ggsave(plot = g3, filename = "C:/Users/JG/Desktop/ReflectanceProfile_LifeCortaderia-v1.png", 
+ggsave(plot = g3, filename = "./OUT/ReflectanceProfile_LifeCortaderia-v2-PT.png", 
        width = 10, height = 8.5)
 
