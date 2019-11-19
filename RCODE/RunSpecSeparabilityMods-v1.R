@@ -5,6 +5,8 @@ library(caret)
 #library(imbalance)
 library(parallel)
 library(doParallel)
+library(forcats)
+library(ggplot2)
 
 # Start a parallel cluster for boosting speed in caret processing
 #cl <- makePSOCKcluster(10)
@@ -168,6 +170,10 @@ for(mlMethod in mlMethods){ # Iterate through all the ML-methods
 # Write performance data scores to file
 write.csv(perfScoresByMLmethod, "./OUT/perfScoresByMLmethod-v1.csv",row.names = FALSE)
 
+
+
+load("./OUT/SeparabilityAnalysis_Cortaderia-v1.RData")
+
 # Arrange/sort the output scores
 arrange(perfScoresByMLmethod,mlMethod,desc(mxKappa)) %>% 
   mutate(mxKappa=round(mxKappa,3), mxAccuracy=round(mxAccuracy,3))
@@ -187,12 +193,25 @@ perfScoresByMLmethod %>%
   select(DiffPerc) %>% pull %>% mean
   
 # Best sensor across all ML methods
-perfScoresByMLmethod %>% 
+medKappa <- perfScoresByMLmethod %>% 
   filter(Sensor != "Worldview-2_and_3") %>% 
   group_by(Sensor) %>% 
   summarize(AvgKappa = mean(mxKappa),
             MedKappa = median(mxKappa)) %>% 
-  arrange(desc(MedKappa))
+  arrange(desc(MedKappa)) %>% 
+  mutate(Sensor = fct_reorder(Sensor, sort(MedKappa, decreasing = FALSE)))
+
+write.csv(medKappa,"./OUT/MedianKappa-BySensorComp-v1.csv")
+
+g <- ggplot(medKappa,aes(x=Sensor, y=MedKappa)) +
+  geom_bar(stat="identity") +
+  theme_bw() +
+  xlab("Sensor name") +
+  ylab("Median Kappa") + 
+  scale_y_continuous(breaks = seq(0,0.9,0.05), limits = c(0,0.9)) +
+  theme(axis.text.x = element_text(angle=90, hjust = 1))
+
+plot(g)
 
 # Average Kappa across ML algorithms
 perfScoresByMLmethod %>% 
@@ -201,6 +220,9 @@ perfScoresByMLmethod %>%
   summarize(AvgKappa = mean(mxKappa),
             MedKappa = median(mxKappa)) %>% 
   arrange(desc(MedKappa))
+
+
+
 
 
 #save.image(file = "./OUT/SeparabilityAnalysis_Cortaderia-v1.RData")
