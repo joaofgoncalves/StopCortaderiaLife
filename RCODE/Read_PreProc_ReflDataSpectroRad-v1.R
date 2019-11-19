@@ -156,13 +156,13 @@ g3 <- ggplot(reflByLCtype %>% filter(wl >= 350, wl <= 1000,
   geom_line(size=1) + 
   #scale_color_brewer(palette="BrBG") +
   ylab("Reflectância") + xlab("Comprimento de onda (nm)") +
-  labs(title="Perfis espectrais") + 
+  #labs(title="Perfis espectrais") + 
   scale_color_brewer(palette = "Set1",name="") + 
-  theme_bw() + 
+  theme_bw(base_size = 18) + 
   theme(legend.position="bottom")
 
 plot(g3)
 
-ggsave(plot = g3, filename = "./OUT/ReflectanceProfile_LifeCortaderia-v2-PT.png", 
+ggsave(plot = g3, filename = "./OUT/ReflectanceProfile_LifeCortaderia-v3-PT.png", 
        width = 10, height = 8.5)
 
