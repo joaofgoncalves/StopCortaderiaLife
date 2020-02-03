@@ -37,9 +37,9 @@ for(scIdx in 1:length(sceneList)){
   
   # List data in orthomosaics folder
   # -- Folder_Ortho1:
-     #  -- GeoTIFF file with mosaic
-     #  -- Shapefile with train data
-     #
+  #  -- GeoTIFF file with mosaic
+  #  -- Shapefile with train data
+  #
   for(fn in foldersList){
     i<-i+1
     ortoMosImgList[i] <- list.files(fn, pattern=".tif$", full.names = TRUE)[1]
@@ -52,12 +52,12 @@ for(scIdx in 1:length(sceneList)){
   i <- 0
   
   
-  # Diagnostics matrix with three columns:
+  # Diagnostics matrix with four columns:
   #
-  # - CRS_Equal - is CRS between s2 scene and ortho equal?
-  # - IsMoContained - is the orthomosaic contained in the S2 scene?
-  # - Does the sample area has digitized data for cortaderia plants?
-  #
+  # - [CRS_Equal] - is CRS between s2 scene and ortho equal?
+  # - [IsMoContained] - is the orthomosaic contained in the S2 scene?
+  # - [HasDigitData] - Does the sample area has digitized data for cortaderia plants?
+  # - [DataType] - Geometry data type
   
   cat("\n-> Performing data diagnostics.......\n")
   
@@ -72,29 +72,42 @@ for(scIdx in 1:length(sceneList)){
     
     i <- i+1
     
-    # Load orthomosaic metadata for data tests
-    r <- raster(imgPath)
-    
-    if(compareCRS(s2imgScene,r)){
+    ## Check orthomosaic
+    if(checkOrtho){
       
-      e2 <- st_as_sfc(st_bbox(r))
-      suppressWarnings(st_crs(e2) <- st_crs(e1))
-      plot(e2, add=TRUE)
-      containTest <- st_contains(e1, e2, sparse = FALSE)[1,1]
+      # Load orthomosaic metadata for data tests
+      r <- raster(imgPath)
       
-      diagMat[i,"CRS_Equal"] <- TRUE
-      
-      if(!containTest){
+      if(compareCRS(s2imgScene,r)){
         
-        diagMat[i,"IsMoContained"] <- FALSE
-        if(is.na(digitShpList[i])){
-          diagMat[i,"HasDigitData"] <- FALSE
+        e2 <- st_as_sfc(st_bbox(r))
+        suppressWarnings(st_crs(e2) <- st_crs(e1))
+        plot(e2, add=TRUE)
+        containTest <- st_contains(e1, e2, sparse = FALSE)[1,1]
+        
+        diagMat[i,"CRS_Equal"] <- TRUE
+        
+        if(!containTest){
+          
+          diagMat[i,"IsMoContained"] <- FALSE
+          if(is.na(digitShpList[i])){
+            diagMat[i,"HasDigitData"] <- FALSE
+          }else{
+            diagMat[i,"HasDigitData"] <- TRUE
+            diagMat[i,"DataType"] <- as.character(st_geometry_type(read_sf(digitShpList[i]))[1])
+          }
         }else{
-          diagMat[i,"HasDigitData"] <- TRUE
-          diagMat[i,"DataType"] <- as.character(st_geometry_type(read_sf(digitShpList[i]))[1])
+          diagMat[i,"IsMoContained"] <- TRUE
+          
+          if(is.na(digitShpList[i])){
+            diagMat[i,"HasDigitData"] <- FALSE
+          }else{
+            diagMat[i,"HasDigitData"] <- TRUE
+            diagMat[i,"DataType"] <- as.character(st_geometry_type(read_sf(digitShpList[i]))[1])
+          }
         }
       }else{
-        diagMat[i,"IsMoContained"] <- TRUE
+        diagMat[i,"CRS_Equal"] <- FALSE
         
         if(is.na(digitShpList[i])){
           diagMat[i,"HasDigitData"] <- FALSE
@@ -103,8 +116,11 @@ for(scIdx in 1:length(sceneList)){
           diagMat[i,"DataType"] <- as.character(st_geometry_type(read_sf(digitShpList[i]))[1])
         }
       }
-    }else{
-      diagMat[i,"CRS_Equal"] <- FALSE
+    }
+    
+    ## --------------------------
+    ## Don't check orthomosaics!!
+    else{
       
       if(is.na(digitShpList[i])){
         diagMat[i,"HasDigitData"] <- FALSE
@@ -112,19 +128,35 @@ for(scIdx in 1:length(sceneList)){
         diagMat[i,"HasDigitData"] <- TRUE
         diagMat[i,"DataType"] <- as.character(st_geometry_type(read_sf(digitShpList[i]))[1])
       }
+      
     }
   }
   
-  # Fill in diagnostics matrix
-  diagMat <- cbind(idx=1:nrow(diagMat),
-                   fn=basename(ortoMosImgList),
-                   tests=apply(diagMat[,-4],1,sum),diagMat)
+  if(checkOrtho){
+    numTests <- 3
+    
+    # Fill in diagnostics matrix
+    diagMat <- cbind(idx   = 1:nrow(diagMat),
+                     fn    = basename(ortoMosImgList),
+                     tests = apply(diagMat[,-4],1,sum),
+                     diagMat)
+  }else{
+    numTests <- 1
+    
+    # Fill in diagnostics matrix
+    diagMat <- cbind(idx   = 1:nrow(diagMat),
+                     fn    = basename(ortoMosImgList),
+                     tests = diagMat$HasDigitData,
+                     diagMat)
+  }
   
-  write.csv(diagMat, paste("./OUT/PIXCLASSIFY/InputDataDiagnostic_scn",scIdx,".csv",sep=""), 
+  # Write csv diagnostics table
+  write.csv(diagMat, paste(outFolder, "/InputDataDiagnostic_scn",scIdx,".csv",sep=""), 
             row.names = FALSE)
   
+  
   # Select data that passes all three tests
-  selDiagMat <- diagMat %>% filter(tests==3)
+  selDiagMat <- diagMat %>% filter(tests == numTests)
   
   # Remove already processed samples as to avoid duplications
   # This happens for samples located between scene overlap regions
@@ -138,7 +170,7 @@ for(scIdx in 1:length(sceneList)){
   s2Ind <- raster(s2imgScene[[1]])
   values(s2Ind) <- 1:ncell(s2imgScene)
   
-
+  
   # ---------------------------------------------------------------------------- #
   # Iterate through all sample areas selected (meeting all criteria)
   # ---------------------------------------------------------------------------- #
@@ -156,6 +188,8 @@ for(scIdx in 1:length(sceneList)){
     # get the orthomosaic path and image metadata
     imgPath <- ortoMosImgList[idx]
     orthoRst <- raster(imgPath)
+    # extract the bounding box for the scene
+    bb <- st_as_sf(st_as_sfc(st_bbox(orthoRst)))
     
     # get/read the digitized data and dissolve it (to avoid 
     # spatially overlapping 'plant' circles which would 
@@ -169,8 +203,7 @@ for(scIdx in 1:length(sceneList)){
       sampInds <- rbind(sampInds,select(shp))
     }
     
-    # extract the bounding box for the scene
-    bb <- st_as_sf(st_as_sfc(st_bbox(orthoRst)))
+    
     if(i==1) crs_to_set <- st_crs(bb)
     suppressWarnings(st_crs(bb) <- crs_to_set)
     bboxes[[i]] <- bb
@@ -216,16 +249,16 @@ for(scIdx in 1:length(sceneList)){
   cat("\n\n-> Exporting bounding boxes and percentage cover training data.......")
   # Export bounding boxes of mosaics and digitized samples of cortaderia individuals
   bbs <- do.call(what = sf:::rbind.sf, args = bboxes)
-  write_sf(bbs,paste("./OUT/PIXCLASSIFY/bboxes_sample_areas_scn_",scIdx,".shp"))
-  write_sf(sampInds,paste("./OUT/PIXCLASSIFY/sample_digit_inds_scn",scIdx,".shp",sep=""))
+  write_sf(bbs,paste(outFolder, "/bboxes_sample_areas_scn_",scIdx,".shp"))
+  write_sf(sampInds,paste(outFolder, "/sample_digit_inds_scn",scIdx,".shp",sep=""))
   # Export coverage percentage using the S2 reference scene as raster grid
   s2TrainPercRst <- s2Ind
   values(s2TrainPercRst) <- 0
   values(s2TrainPercRst)[rstGridDF$layer] <- rstGridDF$percCov
-  outPercTrainRstPath <- paste("./OUT/PIXCLASSIFY/s2TrainPercRst_scn",scIdx,"_v1.tif",sep="")
+  outPercTrainRstPath <- paste(outFolder, "/s2TrainPercRst_scn",scIdx,"_v1.tif",sep="")
   writeRaster(s2TrainPercRst, outPercTrainRstPath, overwrite=TRUE)
   
-
+  
   # Extract spectral data from s2 scene ------------------------- #
   cat("\n\n-> Extracting data for S2 scene index [",scIdx,"].......")
   
@@ -250,6 +283,7 @@ for(scIdx in 1:length(sceneList)){
   }else{
     rstTrainDF <- rbind(rstTrainDF, rstTrainDFtmp)
   }
-  
 }
+
+
 

@@ -11,7 +11,7 @@ library(ggplot2)
 library(patchwork)
 
 
-threshValues <- seq(from=0.0001,to=80, by=2.5)
+threshValues <- seq(from=0.0001,to=70, by=2.5)
 
 nRounds <- 30
 NR <- nRounds*length(threshValues)
@@ -89,7 +89,7 @@ gg <- g1+g2+g3 +
     title = "Accuracy vs. % Coverage of Cortaderia in Sentinel-2 pixels",
     subtitle="Accuracy values distribution for 30 random forest classifiers")
 
-ggsave("./OUT/Accuracy_vs_CovThresh-v1.png",width = 13,height = 6)
+ggsave("./OUT/Accuracy_vs_CovThresh-v3.png",width = 13,height = 6)
 
 
 

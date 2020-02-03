@@ -120,7 +120,7 @@ for(scIdx in 1:length(sceneList)){
                    fn=basename(ortoMosImgList),
                    tests=apply(diagMat[,-4],1,sum),diagMat)
   
-  write.csv(diagMat, paste("./OUT/PIXCLASSIFY/InputDataDiagnostic_scn",scIdx,".csv",sep=""), 
+  write.csv(diagMat, paste(outFolder,"/InputDataDiagnostic_scn",scIdx,".csv",sep=""), 
             row.names = FALSE)
   
   # Select data that passes all three tests
@@ -129,7 +129,7 @@ for(scIdx in 1:length(sceneList)){
   # Remove already processed samples as to avoid duplications
   # This happens for samples located between scene overlap regions
   #
-  if(scIdx>1){
+  if(scIdx > 1){
     selDiagMat <- selDiagMat %>% filter(!(idx %in% procMosIdxs))
   }
   procMosIdxs <- c(procMosIdxs, selDiagMat$idx) # Accumulate new idxs after filtering...
@@ -164,9 +164,9 @@ for(scIdx in 1:length(sceneList)){
     suppressWarnings(shp_un <- st_union(shp))
     
     if(i==1){
-      sampInds <- select(shp)
+      sampInds <- dplyr::select(shp)
     }else{
-      sampInds <- rbind(sampInds,select(shp))
+      sampInds <- rbind(sampInds, dplyr::select(shp))
     }
     
     # extract the bounding box for the scene
@@ -191,7 +191,7 @@ for(scIdx in 1:length(sceneList)){
     # joint the data for intersected cells to all the vectorized grid
     tmpRstGrid <- rstGrid %>% 
       st_drop_geometry() %>% 
-      left_join(rstInt %>% select(-init_area), by = "layer") %>% 
+      left_join(rstInt %>% dplyr::select(-init_area), by = "layer") %>% 
       mutate(ints_area = coalesce(ints_area, 0)) %>% 
       mutate(percCov   = coalesce(percCov, 0)) %>% 
       drop_units() %>% 
@@ -216,13 +216,13 @@ for(scIdx in 1:length(sceneList)){
   cat("\n\n-> Exporting bounding boxes and percentage cover training data.......")
   # Export bounding boxes of mosaics and digitized samples of cortaderia individuals
   bbs <- do.call(what = sf:::rbind.sf, args = bboxes)
-  write_sf(bbs,paste("./OUT/PIXCLASSIFY/bboxes_sample_areas_scn_",scIdx,".shp"))
-  write_sf(sampInds,paste("./OUT/PIXCLASSIFY/sample_digit_inds_scn",scIdx,".shp",sep=""))
+  write_sf(bbs,paste(outFolder, "/bboxes_sample_areas_scn_",scIdx,".shp",sep=""))
+  write_sf(sampInds,paste(outFolder, "/sample_digit_inds_scn",scIdx,".shp",sep=""))
   # Export coverage percentage using the S2 reference scene as raster grid
   s2TrainPercRst <- s2Ind
   values(s2TrainPercRst) <- 0
   values(s2TrainPercRst)[rstGridDF$layer] <- rstGridDF$percCov
-  outPercTrainRstPath <- paste("./OUT/PIXCLASSIFY/s2TrainPercRst_scn",scIdx,"_v1.tif",sep="")
+  outPercTrainRstPath <- paste(outFolder, "/s2TrainPercRst_scn",scIdx,"_v1.tif",sep="")
   writeRaster(s2TrainPercRst, outPercTrainRstPath, overwrite=TRUE)
   
 
@@ -231,25 +231,48 @@ for(scIdx in 1:length(sceneList)){
   
   # Get pixel coordinates from cell number IDs as a spatial object 
   xyPixels <- xyFromCell(s2imgScene, rstGridDF$layer, spatial=TRUE)
-  rstS2DF <- raster::extract(s2imgScene, xyPixels, df=TRUE, cellnumbers=TRUE)
+  rstS2DF <- raster::extract(s2imgScene, xyPixels, df = TRUE, cellnumbers = TRUE)
   
+
   # Compile training data --------------------------------------- #
   rstTrainDFtmp <- rstGridDF %>% 
     left_join(rstS2DF, by=c("layer"="cells")) %>% 
     mutate(pr = ifelse(percCov >= threshTrainPos, 1, 0)) %>% # Add a binary column
     mutate(pr = as.factor(pr))
   
+  # Get pseudo-absence data --------------------------------------- #
+  if(extractPseudoAbsences){
+    cat("\n\n-> Extracting random PA data for S2 scene index [",scIdx,"].......")
+    
+    # Perform simple random sampling
+    if(doSRS){
+      spRandSamp <- sampleRandom(s2imgScene, size = randSampSize)
+      spRandSamp <- data.frame(layer = -1, percCov = 0, ID = -1, spRandSamp, pr = 0)
+    }
+    
+    # Perform stratified random sampling
+    if(doStRS){
+      strataRst <- raster(clusterStrataList[[scIdx]][1])
+      stRst <- sampleStratified(strataRst, size = randSampSize, sp = TRUE)
+      spRandSamp <- raster::extract(s2imgScene, stRst, df = TRUE)
+      spRandSamp <- data.frame(layer = -1, percCov = 0, spRandSamp, pr = 0)
+    }
+
+    # Append pseudo-absence data
+    rstTrainDFtmp <- rbind(rstTrainDFtmp, spRandSamp)
+  }
+
   # Remove cases with low % cover (above 0 and below the threshold)
   if(removeBelowThresh){
     rstTrainDFtmp <- rstTrainDFtmp %>% filter(!(percCov>0 & percCov<threshTrainPos))
   }
   
   # Append train data across multiple S2 scenes
-  if(scIdx==1){
+  if(scIdx == 1){
     rstTrainDF <- rstTrainDFtmp
   }else{
     rstTrainDF <- rbind(rstTrainDF, rstTrainDFtmp)
   }
-  
 }
 
+View(rstTrainDF)

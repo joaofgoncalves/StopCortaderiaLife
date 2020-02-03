@@ -11,20 +11,22 @@ library(BBmisc)
 
 source("./RCODE/_INPUT_PARAMS.R")
 
-rstTrainDF <- rstTrainDF %>% filter(!(percCov>0 & percCov<threshTrainPos))
+#rstTrainDF <- rstTrainDF %>% filter(!(percCov>0 & percCov<threshTrainPos))
 
 
 #rstTrainDF %>% filter(percCov > 50) %>% nrow
 #posTrainDF <- rstTrainDF %>% filter(percCov > 0)
-posTrainDF <- rstTrainDF %>% filter(percCov >= threshTrainPos)
+posTrainDF <- rstTrainDF %>% filter(percCov >= 30) %>% mutate(pr=1)
 negTrainDF <- rstTrainDF %>% filter(percCov == 0) %>% sample_n(size = nrow(posTrainDF))
 blrstTrainDF <- rbind(posTrainDF, negTrainDF)
 
+blrstTrainDF <- blrstTrainDF %>% mutate(pr=as.factor(pr))
 
 ## Continuous prediction (% cover) ----------------------------------- ##
+rstTrainDF1 <- rstTrainDF %>% filter(percCov > 0) 
 
-rf1 <- randomForest(x = rstTrainDF %>% select(-layer, -ID, -percCov, -pr),
-                    y =  rstTrainDF %>% select(percCov) %>% pull)
+rf1 <- randomForest(x = rstTrainDF1 %>% dplyr::select(-layer, -ID, -percCov, -pr),
+                    y =  rstTrainDF1 %>% dplyr::select(percCov) %>% pull)
 print(rf1)
 varImpPlot(rf1)
 
@@ -64,8 +66,8 @@ for(threshVal in seq(10,50,by=5)){
 
 
 rf4 <- randomForest(x = blrstTrainDF %>% select(-layer, -ID, -percCov, -pr),
-                    y =  blrstTrainDF %>% select(pr) %>% pull,
-                    classwt = c(10,1))
+                    y =  blrstTrainDF %>% select(pr) %>% pull, ntree = 1000)
+                    #classwt = c(10,1))
 print(rf4)
 varImpPlot(rf4)
 
