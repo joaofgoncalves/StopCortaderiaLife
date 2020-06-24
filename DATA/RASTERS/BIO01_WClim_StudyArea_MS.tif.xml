@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata xml:lang="pt"><Esri><CreaDate>20200406</CreaDate><CreaTime>14594000</CreaTime><ArcGISFormat>1.0</ArcGISFormat><SyncOnce>TRUE</SyncOnce><DataProperties><lineage><Process ToolSource="c:\program files (x86)\arcgis\desktop10.5\ArcToolbox\Toolboxes\Spatial Analyst Tools.tbx\ExtractByMask" Date="20200406" Time="145940">ExtractByMask bio01_med.tif StudyArea_bbox_intBuff_MS C:\MyFiles\R-dev\StopCortaderiaLife\DATA\RASTERS\BIO01_WClim_StudyArea_MS.tif</Process></lineage></DataProperties></Esri></metadata>
