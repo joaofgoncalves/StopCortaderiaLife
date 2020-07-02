@@ -12,12 +12,14 @@ library(BBmisc)
 library(ggplot2)
 library(patchwork)
 
+rstTrainDF <- readRDS(file="./OUT/LC_rstTrainDF-v1.RData")
+
+
 # lowInt <- seq(0,200/3,by=100/3)
 # highInt <- seq(100/3,100,by=100/3)
 
 lowInt <- seq(0, 60, by = 5)
 highInt <- c(seq(5, 60, by = 5), 100)
-
 cv <- round(lowInt + ((highInt-lowInt)/2), 2)
 
 print(length(lowInt))
@@ -73,7 +75,9 @@ for(i in 1:length(lowInt)){
   }
 }
 
-tmpRes <- res %>% group_by(thresh) %>% summarise(medAcc=median(Acc))
+
+
+#tmpRes <- res %>% group_by(thresh) %>% summarise(medAcc=median(Acc))
 
 g1 <- ggplot(res,aes(x=as.factor(thresh), y=Acc)) + 
   geom_boxplot(fill="orange2",color="black", alpha=0.4) + 
@@ -123,7 +127,7 @@ plot(g3)
 
 gg <- g1+g2+g3 + 
   plot_annotation(
-    title = "Accuracy vs. % Coverage of Cortaderia in Sentinel-2 pixels",
-    subtitle="Accuracy values distribution for 100 random forest classifiers with n=40")
+    title = "Accuracy vs. % coverage of Cortaderia in Sentinel-2 pixels",
+    subtitle="Accuracy values distribution for 100 random forest classifiers (with n=40)")
 
-plot(gg)
+ggsave(filename = "./OUT/AccVsCoverageClass-v1.png", plot = gg, width = 14, height = 5)
