@@ -179,16 +179,16 @@ for(scIdx in 1:length(sceneList)){
     
     # convert pixel/indices to polygons (faster processing this)
     rstGrid <- st_as_sf(rasterToPolygons(s2IndMask)) %>% 
-      mutate(init_area = st_area(.))
+      mutate(init_area = drop_units(st_area(.)))
     
     # intersect the vectorized raster grid and extract the % cover
     # (only applies to intersect cells...?!)
     rstInt <- st_intersection(rstGrid, shp_un) %>% 
-      mutate(ints_area = st_area(.)) %>%
-      mutate(percCov = (ints_area/init_area)*100) %>% 
-      st_drop_geometry()
+      mutate(ints_area = drop_units(st_area(.))) %>%
+      mutate(percCov = (ints_area / init_area) * 100) %>% 
+      suppressWarnings(st_drop_geometry())
     
-    # joint the data for intersected cells to all the vectorized grid
+    # join the data for intersected cells to all the vectorized grid
     tmpRstGrid <- rstGrid %>% 
       st_drop_geometry() %>% 
       left_join(rstInt %>% dplyr::select(-init_area), by = "layer") %>% 
@@ -197,7 +197,7 @@ for(scIdx in 1:length(sceneList)){
       drop_units() %>% 
       group_by(layer) %>% 
       # aggregate possible disjunct areas for same pixel
-      summarize(percCov = sum(percCov)) %>%  
+      summarize(percCov = sum(percCov), .groups = "drop_last") %>%  
       as.data.frame()
     
     # append data for all selected train areas
@@ -274,5 +274,7 @@ for(scIdx in 1:length(sceneList)){
     rstTrainDF <- rbind(rstTrainDF, rstTrainDFtmp)
   }
 }
+
+#saveRDS(rstTrainDF, file="./OUT/LC_rstTrainDF-v1.RData")
 
 View(rstTrainDF)
