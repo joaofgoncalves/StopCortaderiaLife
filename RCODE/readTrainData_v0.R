@@ -16,7 +16,6 @@ source("./RCODE/_INPUT_PARAMS.R")
 ## ------------------------------------------------------------------------------------ ##
 
 
-
 foldersList <- list.dirs(orthoFolder, recursive=FALSE, full.names = TRUE)
 procMosIdxs <- c()
 
@@ -48,10 +47,9 @@ for(scIdx in 1:length(sceneList)){
   
   # Bounding box for the reference S2 image/scene
   e1 <- st_as_sfc(st_bbox(s2imgScene))
-  plot(e1)
-  i <- 0
+  #plot(e1)
   
-  
+
   # Diagnostics matrix with three columns:
   #
   # - CRS_Equal - is CRS between s2 scene and ortho equal?
@@ -68,6 +66,8 @@ for(scIdx in 1:length(sceneList)){
   
   # Iterate through all mosaics
   #
+  i <- 0
+  
   for(imgPath in ortoMosImgList){
     
     i <- i+1
@@ -79,7 +79,7 @@ for(scIdx in 1:length(sceneList)){
       
       e2 <- st_as_sfc(st_bbox(r))
       suppressWarnings(st_crs(e2) <- st_crs(e1))
-      plot(e2, add=TRUE)
+      #plot(e2, add=TRUE)
       containTest <- st_contains(e1, e2, sparse = FALSE)[1,1]
       
       diagMat[i,"CRS_Equal"] <- TRUE
@@ -116,23 +116,28 @@ for(scIdx in 1:length(sceneList)){
   }
   
   # Fill in diagnostics matrix
-  diagMat <- cbind(idx=1:nrow(diagMat),
-                   fn=basename(ortoMosImgList),
-                   tests=apply(diagMat[,-4],1,sum),diagMat)
+  diagMat <- cbind(idx   = 1:nrow(diagMat),
+                   fn    = basename(ortoMosImgList),
+                   tests = apply(diagMat[,-4],1,sum),diagMat)
   
   write.csv(diagMat, paste(outFolder,"/InputDataDiagnostic_scn",scIdx,".csv",sep=""), 
             row.names = FALSE)
   
   # Select data that passes all three tests
-  selDiagMat <- diagMat %>% filter(tests==3)
+  selDiagMat <- diagMat %>% 
+    filter(tests==3)
   
   # Remove already processed samples as to avoid duplications
   # This happens for samples located between scene overlap regions
   #
   if(scIdx > 1){
-    selDiagMat <- selDiagMat %>% filter(!(idx %in% procMosIdxs))
+    selDiagMat <- selDiagMat %>% 
+      filter(!(idx %in% procMosIdxs))
   }
-  procMosIdxs <- c(procMosIdxs, selDiagMat$idx) # Accumulate new idxs after filtering...
+  
+  # Accumulate new idxs after filtering for control...
+  # procMosIdxs stores the list of drone orthomosaics already processed
+  procMosIdxs <- c(procMosIdxs, selDiagMat$idx)
   
   # Create a raster grid with pixel indices of the the reference s2imgScene scene
   s2Ind <- raster(s2imgScene[[1]])
@@ -145,7 +150,14 @@ for(scIdx in 1:length(sceneList)){
   #
   cat("\n-> Calculating percentage cover by pixel.......\n\n")
   nr <- nrow(selDiagMat)
-  pb <- txtProgressBar(min=1, max=nr, style=3)
+  
+  # Check if there are data in the scene image? if not skip through
+  if(nr == 0){
+    cat("\nSkipping to next scene... nothing to see here!!....\n\n")
+    next
+  }
+    
+  pb <- txtProgressBar(min=0, max=nr, style=3)
   bboxes <- list()
   
   for(i in 1:nr){
@@ -171,10 +183,12 @@ for(scIdx in 1:length(sceneList)){
     
     # extract the bounding box for the scene
     bb <- st_as_sf(st_as_sfc(st_bbox(orthoRst)))
+    
     if(i==1) crs_to_set <- st_crs(bb)
     suppressWarnings(st_crs(bb) <- crs_to_set)
     bboxes[[i]] <- bb
-    # get the reference sentinel-2 scene indices
+    
+    # Get the reference sentinel-2 scene indices
     s2IndMask <- mask(crop(s2Ind, bb), bb)
     
     # convert pixel/indices to polygons (faster processing this)
@@ -185,8 +199,9 @@ for(scIdx in 1:length(sceneList)){
     # (only applies to intersect cells...?!)
     rstInt <- st_intersection(rstGrid, shp_un) %>% 
       mutate(ints_area = drop_units(st_area(.))) %>%
-      mutate(percCov = (ints_area / init_area) * 100) %>% 
-      suppressWarnings(st_drop_geometry())
+      mutate(percCov = (ints_area / init_area) * 100)
+    # Remove geometry/spatial data from the object
+    rstInt <- st_drop_geometry(rstInt)
     
     # join the data for intersected cells to all the vectorized grid
     tmpRstGrid <- rstGrid %>% 
@@ -196,7 +211,7 @@ for(scIdx in 1:length(sceneList)){
       mutate(percCov   = coalesce(percCov, 0)) %>% 
       drop_units() %>% 
       group_by(layer) %>% 
-      # aggregate possible disjunct areas for same pixel
+      # aggregate possible disjunct (sub-)areas for the same pixel
       summarize(percCov = sum(percCov), .groups = "drop_last") %>%  
       as.data.frame()
     
@@ -218,6 +233,7 @@ for(scIdx in 1:length(sceneList)){
   bbs <- do.call(what = sf:::rbind.sf, args = bboxes)
   write_sf(bbs,paste(outFolder, "/bboxes_sample_areas_scn_",scIdx,".shp",sep=""))
   write_sf(sampInds,paste(outFolder, "/sample_digit_inds_scn",scIdx,".shp",sep=""))
+  
   # Export coverage percentage using the S2 reference scene as raster grid
   s2TrainPercRst <- s2Ind
   values(s2TrainPercRst) <- 0
@@ -244,6 +260,10 @@ for(scIdx in 1:length(sceneList)){
   if(extractPseudoAbsences){
     cat("\n\n-> Extracting random PA data for S2 scene index [",scIdx,"].......")
     
+    if(doSRS & doStRS){
+      stop("Select either doSRS OR doStRS! Check inoput params.")
+    }
+    
     # Perform simple random sampling
     if(doSRS){
       spRandSamp <- sampleRandom(s2imgScene, size = randSampSize)
@@ -264,7 +284,8 @@ for(scIdx in 1:length(sceneList)){
 
   # Remove cases with low % cover (above 0 and below the threshold)
   if(removeBelowThresh){
-    rstTrainDFtmp <- rstTrainDFtmp %>% filter(!(percCov>0 & percCov<threshTrainPos))
+    rstTrainDFtmp <- rstTrainDFtmp %>% 
+      filter(!(percCov > 0 & percCov < threshTrainPos))
   }
   
   # Append train data across multiple S2 scenes
@@ -275,6 +296,10 @@ for(scIdx in 1:length(sceneList)){
   }
 }
 
-#saveRDS(rstTrainDF, file="./OUT/LC_rstTrainDF-v1.RData")
+if(saveData){
+  saveRDS(rstTrainDF, file=outFile)
+}
+if(viewData){
+  View(rstTrainDF)
+}
 
-View(rstTrainDF)
