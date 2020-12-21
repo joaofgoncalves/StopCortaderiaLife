@@ -21,8 +21,10 @@ procMosIdxs <- c()
 
 for(scIdx in 1:length(sceneList)){
   
+  scnCode <- scnCodes[scIdx]
+  
   cat("\n\n## -------------------------------------------------------------------\n")
-  cat("## Analyzing scene index:",scIdx,"\n")
+  cat("## Analyzing scene index:",scIdx,"| code:",scnCode,"\n")
   cat("## -------------------------------------------------------------------\n")
   
   # Load and stack each S2 scene
@@ -120,7 +122,7 @@ for(scIdx in 1:length(sceneList)){
                    fn    = basename(ortoMosImgList),
                    tests = apply(diagMat[,-4],1,sum),diagMat)
   
-  write.csv(diagMat, paste(outFolder,"/InputDataDiagnostic_scn",scIdx,".csv",sep=""), 
+  write.csv(diagMat, paste(outFolder,"/InputDataDiagnostic_scn",scIdx,"_",scnCode,".csv",sep=""), 
             row.names = FALSE)
   
   # Select data that passes all three tests
@@ -153,7 +155,7 @@ for(scIdx in 1:length(sceneList)){
   
   # Check if there are data in the scene image? if not skip through
   if(nr == 0){
-    cat("\nSkipping to next scene... nothing to see here!!....\n\n")
+    cat("\n-> Skipping to next scene... nothing to see here!!....")
     next
   }
     
@@ -215,6 +217,12 @@ for(scIdx in 1:length(sceneList)){
       summarize(percCov = sum(percCov), .groups = "drop_last") %>%  
       as.data.frame()
     
+    tmpRstGrid <- data.frame(MOSAIC_ID = idx,
+                             DATA_TYPE = "FIELD",
+                             SCN_INDEX = scIdx,
+                             SCN_CODE  = scnCode,
+                             tmpRstGrid)
+    
     # append data for all selected train areas
     # the 'layer' field in rstGrid shows the pixel indices 
     # from the s2 reference scene
@@ -231,19 +239,19 @@ for(scIdx in 1:length(sceneList)){
   cat("\n\n-> Exporting bounding boxes and percentage cover training data.......")
   # Export bounding boxes of mosaics and digitized samples of cortaderia individuals
   bbs <- do.call(what = sf:::rbind.sf, args = bboxes)
-  write_sf(bbs,paste(outFolder, "/bboxes_sample_areas_scn_",scIdx,".shp",sep=""))
-  write_sf(sampInds,paste(outFolder, "/sample_digit_inds_scn",scIdx,".shp",sep=""))
+  write_sf(bbs,paste(outFolder, "/bboxes_sample_areas_scn_",scIdx,"_",scnCode,".shp",sep=""))
+  write_sf(sampInds,paste(outFolder, "/sample_digit_inds_scn",scIdx,"_",scnCode,".shp",sep=""))
   
   # Export coverage percentage using the S2 reference scene as raster grid
   s2TrainPercRst <- s2Ind
   values(s2TrainPercRst) <- 0
   values(s2TrainPercRst)[rstGridDF$layer] <- rstGridDF$percCov
-  outPercTrainRstPath <- paste(outFolder, "/s2TrainPercRst_scn",scIdx,"_v1.tif",sep="")
+  outPercTrainRstPath <- paste(outFolder, "/s2TrainPercRst_scn",scIdx,"_",scnCode,"_v1.tif",sep="")
   writeRaster(s2TrainPercRst, outPercTrainRstPath, overwrite=TRUE)
   
 
   # Extract spectral data from s2 scene ------------------------- #
-  cat("\n\n-> Extracting data for S2 scene index [",scIdx,"].......")
+  cat("\n\n-> Extracting data for S2 scene index [",scIdx,"|",scnCode,"].......")
   
   # Get pixel coordinates from cell number IDs as a spatial object 
   xyPixels <- xyFromCell(s2imgScene, rstGridDF$layer, spatial=TRUE)
@@ -258,10 +266,10 @@ for(scIdx in 1:length(sceneList)){
   
   # Get pseudo-absence data --------------------------------------- #
   if(extractPseudoAbsences){
-    cat("\n\n-> Extracting random PA data for S2 scene index [",scIdx,"].......")
+    cat("\n\n-> Extracting random PA data for S2 scene index [",scIdx,"|",scnCode,"].......")
     
     if(doSRS & doStRS){
-      stop("Select either doSRS OR doStRS! Check inoput params.")
+      stop("Select either doSRS OR doStRS! Check input params.")
     }
     
     # Perform simple random sampling
@@ -278,6 +286,12 @@ for(scIdx in 1:length(sceneList)){
       spRandSamp <- data.frame(layer = -1, percCov = 0, spRandSamp, pr = 0)
     }
 
+    spRandSamp <- data.frame(MOSAIC_ID = idx,
+                             DATA_TYPE = "PSEUDO_ABS",
+                             SCN_INDEX = scIdx,
+                             SCN_CODE  = scnCode,
+                             spRandSamp)
+    
     # Append pseudo-absence data
     rstTrainDFtmp <- rbind(rstTrainDFtmp, spRandSamp)
   }
