@@ -6,11 +6,13 @@ library(tidyr)
 library(sf)
 library(units)
 
+rm(list=ls())
 
 ## ------------------------------------------------------------------------------------ ##
 ## Inputs
 
-source("./RCODE/_INPUT_PARAMS.R")
+#source("./RCODE/_INPUT_PARAMS.R")
+source("./RCODE/_INPUT_PARAMS_L8.R")
 
 ## End of inputs
 ## ------------------------------------------------------------------------------------ ##
@@ -212,12 +214,12 @@ for(scIdx in 1:length(sceneList)){
     
     # convert pixel/indices to polygons (faster processing this)
     rstGrid <- st_as_sf(rasterToPolygons(s2IndMask)) %>% 
-      mutate(init_area = st_area(.))
+      mutate(init_area = drop_units(st_area(.)))
     
     # intersect the vectorized raster grid and extract the % cover
     # (only applies to intersect cells...?!)
     rstInt <- st_intersection(rstGrid, shp_un) %>% 
-      mutate(ints_area = st_area(.)) %>%
+      mutate(ints_area = drop_units(st_area(.))) %>%
       mutate(percCov = (ints_area/init_area)*100) %>% 
       st_drop_geometry()
     
@@ -230,7 +232,7 @@ for(scIdx in 1:length(sceneList)){
       drop_units() %>% 
       group_by(layer) %>% 
       # aggregate possible disjunct areas for same pixel
-      summarize(percCov = sum(percCov)) %>%  
+      summarize(percCov = sum(percCov), .groups="drop") %>%  
       as.data.frame()
     
     # append data for all selected train areas
