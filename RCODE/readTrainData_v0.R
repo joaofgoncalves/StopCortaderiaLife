@@ -7,10 +7,15 @@ library(sf)
 library(units)
 
 
+rm(list=ls())
+
+
 ## ------------------------------------------------------------------------------------ ##
 ## Inputs
+#source("./RCODE/_INPUT_PARAMS.R")
+source("./RCODE/_INPUT_PARAMS_L8.R")
 
-source("./RCODE/_INPUT_PARAMS.R")
+source("./RCODE/_AUX_FUNS.R")
 
 ## End of inputs
 ## ------------------------------------------------------------------------------------ ##
@@ -27,8 +32,32 @@ for(scIdx in 1:length(sceneList)){
   cat("## Analyzing scene index:",scIdx,"| code:",scnCode,"\n")
   cat("## -------------------------------------------------------------------\n")
   
-  # Load and stack each S2 scene
-  s2imgScene <- raster::stack(sceneList[[scIdx]])
+  if(checkL8ExtentDifferences){
+    
+    cat("\n-> Checking Landsat-8 image data differences.......")
+    
+    s1 <- raster::stack(sceneList[[scIdx]][1:10])
+    s2 <- raster::stack(sceneList[[scIdx]][11:20])
+    
+    compRst <- compareRaster(s1, s2, stopiffalse=FALSE, 
+                             showwarning=FALSE)
+    
+    if(!compRst){
+      s1 <- crop(s1, s2)
+      s2 <- crop(s2, s1)
+    }
+    
+    s2imgScene <- raster::stack(s1, s2)
+    
+    cat("done!\n")
+    
+  }else{
+    
+    # Load and stack each S2 scene
+    s2imgScene <- raster::stack(sceneList[[scIdx]])
+    
+  }
+  
   # Attribute names for each layer in the scene stack
   names(s2imgScene) <- sceneBandNames[[scIdx]]
   
@@ -93,7 +122,8 @@ for(scIdx in 1:length(sceneList)){
           diagMat[i,"HasDigitData"] <- FALSE
         }else{
           diagMat[i,"HasDigitData"] <- TRUE
-          diagMat[i,"DataType"] <- as.character(st_geometry_type(read_sf(digitShpList[i]))[1])
+          diagMat[i,"DataType"] <- as.character(st_geometry_type(
+            read_sf(digitShpList[i]))[1])
         }
       }else{
         diagMat[i,"IsMoContained"] <- TRUE
@@ -102,7 +132,8 @@ for(scIdx in 1:length(sceneList)){
           diagMat[i,"HasDigitData"] <- FALSE
         }else{
           diagMat[i,"HasDigitData"] <- TRUE
-          diagMat[i,"DataType"] <- as.character(st_geometry_type(read_sf(digitShpList[i]))[1])
+          diagMat[i,"DataType"] <- as.character(st_geometry_type(
+            read_sf(digitShpList[i]))[1])
         }
       }
     }else{
@@ -112,7 +143,8 @@ for(scIdx in 1:length(sceneList)){
         diagMat[i,"HasDigitData"] <- FALSE
       }else{
         diagMat[i,"HasDigitData"] <- TRUE
-        diagMat[i,"DataType"] <- as.character(st_geometry_type(read_sf(digitShpList[i]))[1])
+        diagMat[i,"DataType"] <- as.character(st_geometry_type(
+          read_sf(digitShpList[i]))[1])
       }
     }
   }
@@ -122,7 +154,8 @@ for(scIdx in 1:length(sceneList)){
                    fn    = basename(ortoMosImgList),
                    tests = apply(diagMat[,-4],1,sum),diagMat)
   
-  write.csv(diagMat, paste(outFolder,"/InputDataDiagnostic_scn",scIdx,"_",scnCode,".csv",sep=""), 
+  write.csv(diagMat, paste(outFolder,"/InputDataDiagnostic_scn",
+                           scIdx,"_",scnCode,".csv",sep=""), 
             row.names = FALSE)
   
   # Select data that passes all three tests
@@ -239,14 +272,17 @@ for(scIdx in 1:length(sceneList)){
   cat("\n\n-> Exporting bounding boxes and percentage cover training data.......")
   # Export bounding boxes of mosaics and digitized samples of cortaderia individuals
   bbs <- do.call(what = sf:::rbind.sf, args = bboxes)
-  write_sf(bbs,paste(outFolder, "/bboxes_sample_areas_scn_",scIdx,"_",scnCode,".shp",sep=""))
-  write_sf(sampInds,paste(outFolder, "/sample_digit_inds_scn",scIdx,"_",scnCode,".shp",sep=""))
+  write_sf(bbs,paste(outFolder, "/bboxes_sample_areas_scn_",
+                     scIdx,"_",scnCode,".shp",sep=""))
+  write_sf(sampInds,paste(outFolder, "/sample_digit_inds_scn",
+                          scIdx,"_",scnCode,".shp",sep=""))
   
   # Export coverage percentage using the S2 reference scene as raster grid
   s2TrainPercRst <- s2Ind
   values(s2TrainPercRst) <- 0
   values(s2TrainPercRst)[rstGridDF$layer] <- rstGridDF$percCov
-  outPercTrainRstPath <- paste(outFolder, "/s2TrainPercRst_scn",scIdx,"_",scnCode,"_v1.tif",sep="")
+  outPercTrainRstPath <- paste(outFolder, "/s2TrainPercRst_scn",
+                               scIdx,"_",scnCode,"_v1.tif",sep="")
   writeRaster(s2TrainPercRst, outPercTrainRstPath, overwrite=TRUE)
   
 
@@ -266,7 +302,8 @@ for(scIdx in 1:length(sceneList)){
   
   # Get pseudo-absence data --------------------------------------- #
   if(extractPseudoAbsences){
-    cat("\n\n-> Extracting random PA data for S2 scene index [",scIdx,"|",scnCode,"].......")
+    cat("\n\n-> Extracting random PA data for S2 scene index [",
+        scIdx,"|",scnCode,"].......")
     
     if(doSRS & doStRS){
       stop("Select either doSRS OR doStRS! Check input params.")
