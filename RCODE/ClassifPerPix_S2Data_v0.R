@@ -75,11 +75,13 @@ varImpPlot(rf4)
 #writeRaster(s2pred, filename="./OUT/S2pred_rf4_balanced_v2.tif")
 #dim(s2imgScene)
 
+rf <- readRDS("./OUT/PIXCLASSIFY_2/RFobjects/RF_Classifier_KFoldCV_idx_03.RData")
+
 
 # Load and stack each S2 scene
-s2imgScene <- raster::stack(sceneList[[1]])
+s2imgScene <- raster::stack(sceneList[[7]])
 # Attribute names for each layer in the scene stack
-names(s2imgScene) <- sceneBandNames[[1]]
+names(s2imgScene) <- sceneBandNames[[7]]
 
 
 rowsPerChunk <- 250
@@ -108,16 +110,16 @@ for(i in 1:length(cks)){
   predDF <- predDF %>% as.data.frame()
   
   preds[!cidx] <- NA
-  #preds[cidx] <- predict(rf4, newdata = predDF, type = "prob")[,2]
-  preds[cidx] <- predict(rfi, newdata=predDF, 
-                         importance=FALSE,
-                         proximity=FALSE,
-                         distance=FALSE,
-                         forest.wt=FALSE,
-                         split.depth=FALSE,
-                         do.trace=FALSE,
-                         membership=FALSE,
-                         statistics=FALSE)
+  preds[cidx] <- predict(rf, newdata = predDF, type = "prob")[,2]
+  # preds[cidx] <- predict(rfi, newdata=predDF, 
+  #                        importance=FALSE,
+  #                        proximity=FALSE,
+  #                        distance=FALSE,
+  #                        forest.wt=FALSE,
+  #                        split.depth=FALSE,
+  #                        do.trace=FALSE,
+  #                        membership=FALSE,
+  #                        statistics=FALSE)
     
   out[idx] <- preds
 
@@ -127,9 +129,9 @@ for(i in 1:length(cks)){
 
 
 
-predRst <- s2imgScene[[1]]
+predRst <- s2imgScene[[7]]
 values(predRst) <- out
-writeRaster(predRst, "./OUT/PIXCLASSIFY/predRst_RF4b_scn1_v2.tif")
+writeRaster(predRst, "./OUT/PIXCLASSIFY/CselloanaRF_RF03_T29TNF_v1_20201219.tif")
   
 
 
