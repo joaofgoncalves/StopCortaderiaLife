@@ -1,28 +1,14 @@
 
 
+source("./RCODE/_AUX_FUNS.R")
+
 # Folder where image mosaics for sampling areas is located
 #orthoFolder <- "./DATA_/RASTER/Orthomosaics"
 orthoFolder <- "D:/DATA/LifeCortaderia/Orthomosaics"
 
 
-# List of Sentinel-2 image scenes
+## SENTINEL-2 image data ----------------------------------------------------------------------------
 # Each element of the list corresponds to a raster stack
-# sceneList <- list(
-#   sc1 = c(
-#     "D:/DATA/LifeCortaderia/SRB/L2A/CROP/MAY/S2B_MSIL2A_20190530T112119_N0212_R037_T29TNG_20190530T132835_crop_v2.tif",
-#     "D:/DATA/LifeCortaderia/SRB/L2A/CROP/OCT/S2B_MSIL2A_20191010T113319_N0213_R080_T29TNG_20191010T141358_crop_v2.tif"
-#     ),
-#   
-#   sc2 = c(
-#     "D:/DATA/LifeCortaderia/SRB/L2A/CROP/MAY/S2B_MSIL2A_20190530T112119_N0212_R037_T29TNF_20190530T132835_crop_v2.tif",
-#     "D:/DATA/LifeCortaderia/SRB/L2A/CROP/OCT/S2B_MSIL2A_20191010T113319_N0213_R080_T29TNF_20191010T141358_crop_v2.tif"),
-#   
-#   sc3 = c(
-#     "D:/DATA/LifeCortaderia/SRB/L2A/CROP/MAY/S2B_MSIL2A_20190530T112119_N0212_R037_T29TNE_20190530T132835_crop_v2.tif",
-#     "D:/DATA/LifeCortaderia/SRB/L2A/CROP/OCT/S2A_MSIL2A_20191022T112121_N0213_R037_T29TNE_20191022T123705_crop_v2.tif")
-# )
-
-
 sceneList <- list(
   sc1 = list.files("D:/DATA/LifeCortaderia/S2_IMAGES/SENTINEL_2019_ALL_CROP/T29SMC",
                    pattern = ".tif$", full.names = TRUE),
@@ -43,33 +29,17 @@ sceneList <- list(
   
 )
 
-get_S2_dates <- function(x){
-  getS2Date <- function(x) substr(unlist(strsplit(basename(x),"_"),
-                                         use.names = FALSE)[3],1,8)
-  out <- sapply(X = x, FUN = getS2Date)
-  names(out) <- NULL
-  return(out)
-}
-
-sortSceneListByDates <- function(x){
-  outList <- list()
-  for(i in 1:length(x)){
-    dts <- get_S2_dates(x[[i]])
-    out <- x[[i]][order(dts)]
-    outList[[paste("sc",i,sep="")]] <- out
-  }
-  return(outList)
-}
-
+# Sort the file list by date of acquisition instead of name
 sortSceneListByDates(sceneList)
 
-
-# 
 # clusterStrataList <- list(
 #   sc1 = c("D:/DATA/LifeCortaderia/Km_20c_scn1.tif"),
 #   sc2 = c("D:/DATA/LifeCortaderia/Km_20c_scn2.tif"),
 #   sc3 = c("D:/DATA/LifeCortaderia/Km_20c_scn3.tif")
 # )
+
+scnCodes <- c("T29SMC","T29SMD","T29SNC","T29SND",
+              "T29TME","T29TNE","T29TNF","T29TNG")
 
 clusterStrataList <- list(
   sc1 = "D:/DATA/LifeCortaderia/S2_IMAGES/km_20c_T29SMC_201908_v1.tif",
@@ -104,8 +74,7 @@ clusterStrataList <- list(
 
 
 # ARVI, S2 Bands, MCARI, MSI
-bandNames <- c( "ARVI",
-                "B4_665_nm",
+bandNames <- c( "B4_665_nm",
                 "B3_560_nm",
                 "B2_490_nm",
                 "B8_842_nm",
@@ -115,12 +84,12 @@ bandNames <- c( "ARVI",
                 "SRB8A_865_nm",
                 "SRB11_1610_nm",
                 "SRB12_2190_nm",
+                "ARVI",
                 "MCARI",
                 "MSI")
 
 bandNames <- c(paste(bandNames,"MAY",sep="_"),
-               paste(bandNames,"JUN",sep="_"),
-               #paste(bandNames,"JUL",sep="_"),
+               paste(bandNames,"JUL",sep="_"),
                paste(bandNames,"AUG",sep="_"),
                paste(bandNames,"SEP",sep="_"),
                paste(bandNames,"OCT",sep="_"))
@@ -134,6 +103,11 @@ sceneBandNames <- list(sc1 = bandNames,
                        sc7 = bandNames,
                        sc8 = bandNames)
 
+
+checkOrtho <- TRUE
+
+checkL8ExtentDifferences <- FALSE
+
 threshTrainPos <- 30
 
 removeBelowThresh <- FALSE
@@ -142,16 +116,16 @@ extractPseudoAbsences <- TRUE
 doSRS <- FALSE
 doStRS <- TRUE
 
-randSampSize <- 100 # In StRS this is the amount per stratum
+randSampSize <- 200 # In StRS this is the amount per stratum
 
 outFolder <- "./OUT/PIXCLASSIFY_2"
 
-outFolderRFobjects <- "./OUT/PIXCLASSIFY_2/RFobjects"
+outFolderRFobjects <- "./OUT/PIXCLASSIFY_2/CLF_OBJECTS"
 
 viewData <- TRUE
 
 saveData <- TRUE
-outFile <- paste("./OUT/LC_rstTrainDF-v2-",
+outFile <- paste("./OUT/LC_rstTrainDF-v4-",
                  format(Sys.time(),"%Y%m%d_%H%M%S"),
                  ".RData",sep="")
 
