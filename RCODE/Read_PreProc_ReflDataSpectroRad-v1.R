@@ -147,10 +147,42 @@ g3 <- ggplot(reflByLCtype %>% filter(wl >= 350, wl <= 1000,
   theme(legend.position="bottom")
 
 
-## PT version
+
+
+
 g3 <- ggplot(reflByLCtype %>% filter(wl >= 350, wl <= 1000, 
                                      !(vegetation_plant %in% c("Daucus sp. (dry)","Mentha sp. / Holcus lanatus",
                                                                "Mix therophytes", "Mentha sp. (fl.)"))), 
+             aes(x=wl,y=refl_AV,color=vegetation_plant)) + 
+  #geom_ribbon(aes(ymin = refl_AV - 0.5*refl_SD, ymax = refl_AV + 0.5*refl_SD),alpha=0.5) +
+  geom_line(size=1) + 
+  #scale_color_brewer(palette="BrBG") +
+  ylab("Reflectance") + xlab("Wavelength (nm)") +
+  #labs(title="Perfis espectrais") + 
+  scale_color_brewer(palette = "Set1",name="") + 
+  theme_bw(base_size = 18) + 
+  theme(legend.position="bottom")
+
+plot(g3)
+
+ggsave(plot = g3, filename = "./OUT/ReflectanceProfile_LifeCortaderia-v4-EN.pdf", 
+       width = 10, height = 8.5)
+
+
+
+## PT version
+
+unique(reflByLCtype$vegetation_plant)
+
+reflByLCtypePT <- reflByLCtype
+
+reflByLCtypePT$vegetation_plant[reflByLCtypePT$vegetation_plant=="Mix therophytes"] <- "Mistura terófitas"
+reflByLCtypePT$vegetation_plant[reflByLCtypePT$vegetation_plant=="Open soil/dry vegetation"] <- "Solo/vegetação seca"
+
+
+g4 <- ggplot(reflByLCtypePT %>% filter(wl >= 350, wl <= 1000, 
+                                     !(vegetation_plant %in% c("Daucus sp. (dry)","Mentha sp. / Holcus lanatus",
+                                                               "Mistura terófitas", "Mentha sp. (fl.)"))), 
              aes(x=wl,y=refl_AV,color=vegetation_plant)) + 
   #geom_ribbon(aes(ymin = refl_AV - 0.5*refl_SD, ymax = refl_AV + 0.5*refl_SD),alpha=0.5) +
   geom_line(size=1) + 
@@ -161,8 +193,14 @@ g3 <- ggplot(reflByLCtype %>% filter(wl >= 350, wl <= 1000,
   theme_bw(base_size = 18) + 
   theme(legend.position="bottom")
 
-plot(g3)
+plot(g4)
 
-ggsave(plot = g3, filename = "./OUT/ReflectanceProfile_LifeCortaderia-v3-PT.png", 
+
+ggsave(plot = g4, filename = "./OUT/ReflectanceProfile_LifeCortaderia-v4-PT.pdf", 
        width = 10, height = 8.5)
+
+
+
+
+
 
