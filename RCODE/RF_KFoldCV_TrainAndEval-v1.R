@@ -30,7 +30,7 @@ print(colnames(rstTrainDF))
 propMWMOTE    <- 1
 
 # Random forest options
-mtry          <- 5
+mtry          <- 10 # S2 = 10 / L8 = 5
 num.trees     <- 1000
 num.threads   <- 6
 probability   <- TRUE
@@ -41,7 +41,7 @@ verbose       <- FALSE
 nFolds        <- 10
 
 # version
-vn <- "v1"
+vn <- "v6"
 
 
 ## --------------------------------------------------------------------------- ##

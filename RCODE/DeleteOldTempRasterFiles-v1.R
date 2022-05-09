@@ -8,14 +8,14 @@ ageoffile <- function(x){
 
 for(i in 1:10000){
   
-  fl <- list.files("C:/temp/RtmpWofEcg/raster", full.names = TRUE)
+  fl <- list.files("C:/temp/RtmpCWgLST/raster", full.names = TRUE)
   
   for(fn in fl){
     
     fage <- ageoffile(fn)
     print(fage)
     
-    if(fage >= 12){
+    if(fage >= 10){
       cat("Removing file:\n")
       cat(paste(" ->",fn,"\n\n"))
       file.remove(fn)
